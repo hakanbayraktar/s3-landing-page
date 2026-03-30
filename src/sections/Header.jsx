@@ -80,8 +80,6 @@ const Header = () => {
 
                 <li className="nav-li">
                   <NavLink title="faq" label="SSS" />
-                  <div className="dot" />
-                  <NavLink title="download" label="İndir" />
                 </li>
               </ul>
             </nav>
