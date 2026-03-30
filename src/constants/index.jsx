@@ -113,8 +113,8 @@ export const plans = [
   {
     id: "0",
     title: "Temel",
-    priceMonthly: 19,
-    priceYearly: 12,
+    priceMonthly: 499,
+    priceYearly: 349,
     caption: "Bireysel üreticiler için ideal",
     features: [
       "200MB Bulut depolama",
@@ -128,8 +128,8 @@ export const plans = [
   {
     id: "1",
     title: "Profesyonel",
-    priceMonthly: 79,
-    priceYearly: 49,
+    priceMonthly: 2499,
+    priceYearly: 1899,
     caption: "En popüler paketimiz",
     features: [
       "Tüm başlangıç özellikleri",
@@ -143,8 +143,8 @@ export const plans = [
   {
     id: "2",
     title: "Kurumsal",
-    priceMonthly: 45,
-    priceYearly: 29,
+    priceMonthly: 1499,
+    priceYearly: 999,
     caption: "Büyük ekipler için tasarlandı",
     features: [
       "Tüm profesyonel özellikler",
