@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="55" viewBox="0 0 160 55" fill="none">
+  <!-- Stylized Icon (DM) -->
+  <path d="M12 10C12 7.79086 13.7909 6 16 6H24C30.6274 6 36 11.3726 36 18C36 24.6274 30.6274 30 24 30H16C13.7909 30 12 28.2091 12 26V10Z" fill="#C084FC"/>
+  <path d="M18 12V24H24C27.3137 24 30 21.3137 30 18C30 14.6863 27.3137 12 24 12H18Z" fill="white"/>
+  <rect x="36" y="18" width="8" height="12" rx="2" fill="#7C3AED"/>
+  
+  <!-- Text: DIJITAL MECRA -->
+  <text x="54" y="24" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="16" fill="white" letter-spacing="1">DİJİTAL</text>
+  <text x="54" y="42" font-family="Inter, system-ui, sans-serif" font-weight="800" font-size="16" fill="#94A3B8" letter-spacing="1">MECRA</text>
+</svg>
