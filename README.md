@@ -45,50 +45,79 @@ graph TD
 
 Aşağıdaki adımlar, projenizi AWS bulutunda profesyonelce barındırmak için izlemeniz gereken tam prosedürdür.
 
-### Adım 1: GitHub Deposunun Hazırlanması
-1. Projenizi GitHub üzerinde yeni bir depoya (repository) pushlayın.
-2. Kök dizinde `buildspec.yml` dosyasının bulunduğundan emin olun.
-3. *![GitHub Repo Görseli](./public/images/placeholders/github-setup.jpg)*
-
-### Adım 2: Amazon S3 Bucket Kurulumu (Statik Hosting)
-1. **Amazon S3** konsoluna gidin ve **"Create bucket"** butonuna tıklayın.
-2. **Bucket Name:** `digitalmecra-s3-bucket`
-3. **Permissions:** "Block all public access" seçimini kaldırın.
-4. **Properties:** En altta **Static website hosting** -> **Enable**.
-   - **Index document:** `index.html`
-   - **Error document:** `error.html`
-5. *![S3 Yapılandırma Görseli](./public/images/placeholders/s3-setup.jpg)*
-
-### Adım 3: AWS CodeBuild Projesinin Yapılandırılması
-1. **CodeBuild** konsolunda yeni proje oluşturun.
-2. **Environment:** Ubuntu, Standard Runtime, Node.js 18+.
-3. **Buildspec:** "Use a buildspec file" seçin.
-4. *![CodeBuild Yapılandırma Görseli](./public/images/placeholders/codebuild-setup.jpg)*
-
-### Adım 4: AWS CodePipeline CI/CD Hattının Oluşturulması
-1. **Step 1: Choose pipeline settings**
-   - **Pipeline name:** `digitalmecra-pipeline`
-   - **Service role:** "New service role" seçeneğini işaretleyin. Bu, AWS'in gerekli izinleri otomatik oluşturmasını sağlar.
-   - **Execution mode:** "Queued" veya "Superseded" seçebilirsiniz.
-2. **Step 2: Add source stage**
-   - Source provider: **GitHub (Version 2)**.
-3. **Step 3: Add build stage**
-   - Build provider: **AWS CodeBuild**.
-4. **Step 4: Add deploy stage**
-   - Deploy provider: **Amazon S3**.
-   - **Bucket:** `digitalmecra-s3-bucket`.
-   - **ÖNEMLİ:** "Extract file before deploy" kutucuğunu işaretlemeyi unutmayın!
-5. *![CodePipeline Adımları Görseli](./public/images/placeholders/codepipeline-flow.jpg)*
+### 📋 Ön Hazırlık
+1. **AWS Hesabı:** Aktif bir AWS hesabınızın olduğundan emin olun.
+2. **GitHub Deposu:** Bu repoyu kendi GitHub hesabınıza kopyalayın (Fork) veya yeni bir repo oluşturun.
+3. **Buildspec Dosyası:** Proje kökündeki `buildspec.yml` dosyasının varlığından emin olun.
 
 ---
 
-## 🌐 Cloudflare ile Custom Domain & SSL (HTTPS) Ayarları
+### Adım 1: Amazon S3 Bucket Kurulumu (Statik Hosting)
+1. **Amazon S3** konsoluna gidin ve **"Create bucket"** butonuna tıklayın.
+2. **Bucket Name:** `digitalmecra-s3-bucket` (Özgün bir isim olmalı).
+3. **Object Ownership:** ACLs disabled (recommended).
+4. **Block Public Access:** "Block all public access" seçimini kaldırın ve alttaki onay kutusunu işaretleyin.
+5. **Properties Sekmesi:**
+   - En altta **Static website hosting** -> Edit -> **Enable**.
+   - **Index document:** `index.html`
+   - **Error document:** `error.html`
+6. **Permissions Sekmesi (Bucket Policy):** Aşağıdaki politikayı ekleyin:
+   ```json
+   {
+       "Version": "2012-10-17",
+       "Statement": [
+           {
+               "Sid": "PublicReadGetObject",
+               "Effect": "Allow",
+               "Principal": "*",
+               "Action": "s3:GetObject",
+               "Resource": "arn:aws:s3:::digitalmecra-s3-bucket/*"
+           }
+       ]
+   }
+   ```
+7. *![S3 Yapılandırma Görseli](./public/images/placeholders/s3-setup.jpg)*
 
-Sitenizin `digitalmecra.devopsatolyesi.com` üzerinden yayınlanması için:
+---
 
-1. **CNAME Kaydı:** 
+### Adım 2: AWS CodeBuild Projesinin Yapılandırılması
+1. **AWS CodeBuild** konsoluna gidin ve **"Create build project"** deyin.
+2. **Project Name:** `digitalmecra-build`
+3. **Source:** **GitHub** seçin. İlk defa bağlıyorsanız **OAuth** veya **Token** ile yetki verin.
+4. **Environment:** 
+   - **Operating System:** Ubuntu, **Runtime:** Standard, **Image:** en son sürüm.
+5. **Service Role:** Yeni bir rol oluşturulmasına izin verin.
+6. **Buildspec:** "Use a buildspec file" seçin.
+7. **Artifacts:** Artifacts type "No artifacts" olarak kalsın (Pipeline yöneteceği için).
+8. *![CodeBuild Yapılandırma Görseli](./public/images/placeholders/codebuild-setup.jpg)*
+
+---
+
+### Adım 3: AWS CodePipeline CI/CD Hattının Oluşturulması
+1. **CodePipeline** konsolunda **"Create pipeline"** deyin.
+2. **Step 1: Pipeline settings**
+   - **Pipeline name:** `digitalmecra-pipeline`
+   - **Service role:** "New service role" as `AWSCodePipelineServiceRole-us-east-1-digitalmecra-pipeline`.
+3. **Step 2: Add source stage**
+   - **Source provider:** GitHub (Version 2).
+   - **Repository & Branch:** Reponuzu ve `main` branch'ini seçin.
+4. **Step 3: Add build stage**
+   - **Build provider:** AWS CodeBuild.
+   - **Project Name:** `digitalmecra-build`.
+5. **Step 4: Add deploy stage**
+   - **Deploy provider:** Amazon S3.
+   - **Bucket:** `digitalmecra-s3-bucket`.
+   - **ÖNEMLİ:** "Extract file before deploy" (Dağıtımdan önce dosyayı ayıkla) kutucuğunu işaretleyin.
+6. *![CodePipeline Adımları Görseli](./public/images/placeholders/codepipeline-flow.jpg)*
+
+---
+
+### Adım 4: Cloudflare ile Custom Domain & SSL Ayarları
+Sitenizin kurumsal bir domain (`digitalmecra.devopsatolyesi.com`) altında HTTPS ile yayınlanması için:
+
+1. **Cloudflare DNS:** Bir **CNAME** kaydı açın.
    - **Name:** `digitalmecra`
-   - **Target:** S3 endpoint (Örn: `digitalmecra-s3-bucket.s3-website-us-east-1.amazonaws.com`)
+   - **Target:** S3 endpoint'i (Örn: `digitalmecra-s3-bucket.s3-website-us-east-1.amazonaws.com`)
 2. **SSL/TLS:** Ayarı **Full** yapın.
 3. *![Cloudflare Görseli](./public/images/placeholders/cloudflare-setup.jpg)*
 
@@ -104,4 +133,4 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
-**Dijital Mecra** - AWS DevOps Eğitim Serisi
+**Dijital Mecra** - AWS & DevOps Eğitim Platformu
