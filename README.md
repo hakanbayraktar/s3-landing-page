@@ -1,89 +1,95 @@
-# 🚀 Dijital Mecra | AWS S3 & Cloudflare Dağıtım Rehberi
+# 🚀 Dijital Mecra | Profesyonel AWS S3 & Cloudflare Dağıtım Rehberi
 
 [![AWS](https://img.shields.io/badge/AWS-S3%20%26%20CodePipeline-orange?style=for-the-badge&logo=amazon-aws)](https://aws.amazon.com/)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-DNS%20%26%20SSL-blue?style=for-the-badge&logo=cloudflare)](https://www.cloudflare.com/)
 [![DevOps](https://img.shields.io/badge/DevOps-CI%2FCD-green?style=for-the-badge)](https://en.wikipedia.org/wiki/DevOps)
 
-Modern web uygulamalarınızı **AWS S3** üzerinde barındırıp, **AWS CodePipeline** ve **Cloudflare** ile profesyonel bir yayına alma sürecini bu rehberde bulabilirsiniz.
+Modern web uygulamalarınızı **AWS S3** üzerinde barındırıp, **AWS CodePipeline** ve **Cloudflare** ile profesyonel bir yayına alma sürecini bu kapsamlı rehberde bulabilirsiniz.
 
 ---
 
-## 🏗️ Mimari Yapı
+## 🏗️ 1. Adım: AWS S3 Bucket Hazırlığı
 
-Aşağıdaki şemada, kodun yerel makinenizden başlayıp global olarak nasıl yayına girdiği gösterilmektedir:
+Sitemizin temelini oluşturacak S3 bucket'ını yapılandırıyoruz.
 
-```mermaid
-graph TD
-    subgraph Yerel_Gelisim ["1. Yerel Geliştirme"]
-        Dev[Kod Yazımı & Test] --> Push[Git Push]
-    end
+1.  **S3 Bucket Oluşturma**: `s3-digital-mecra` adında bir bucket oluşturun. Bölge (Region) olarak `us-east-1` (N. Virginia) önerilir.
+2.  **Statik Hosting**: Bucket ayarlarına gidin ve **Static website hosting**'i aktif edin.
+3.  **İzinler (Permissions)**: "Block all public access" seçeneğini kaldırın.
 
-    subgraph GitHub ["2. Kaynak Kontrolü"]
-        Push --> Repo[hakanbayraktar/s3-landing-page]
-    end
-
-    subgraph AWS_Bulut ["3. CI/CD Hattı (AWS)"]
-        Repo --> CP[AWS CodePipeline]
-        CP --> CB[AWS CodeBuild]
-        CB -->|Artifacts| S3_Host[AWS S3 - Hosting Bucket]
-    end
-
-    subgraph Erisim ["4. Global Erişim (Cloudflare)"]
-        S3_Host --> CF[Cloudflare CDN / DNS]
-        CF --> User((Kullanıcılar))
-    end
-```
-
----
-
-## 🛠️ Adım 1: S3 Bucket & Statik Hosting
-
-İlk aşamada dosyalarımızın barınacağı ana alanı oluşturuyoruz.
-
-> [!IMPORTANT]
-> **Bucket İsmi Hakkında**: Yaygın bir yanlış inanışın aksine, Cloudflare ile CNAME kullanırken S3 bucket ismi mutlaka domain adınızla aynı olmak zorunda değildir. Ancak düzenli olması adına benzer bir isim seçmeniz önerilir.
-
-1.  **Bucket Oluşturma**: `s3-digital-mecra` isminde bir bucket oluşturun.
-2.  **Statik Web Sitesi**: "Static website hosting" özelliğini aktif edin.
-
-![S3 Bucket Creation](./public/images/pdf-extracted/page_1.png)
-
----
-
-## 🔄 Adım 2: AWS CodePipeline CI/CD Kurulumu
-
-Kodunuz her değiştiğinde sitenizin otomatik güncellenmesi için bir boru hattı (pipeline) kuruyoruz.
-
-1.  **Pipeline Ayarları**: Queued (Kuyruğa alınmış) modda ve yeni bir `Service Role` ile başlatın.
-2.  **Kaynak**: GitHub (OAuth) kullanarak deponuzu bağlayın.
-3.  **Build**: AWS CodeBuild kullanarak `npm run build` komutunu çalıştıracak yapılandırmayı yapın.
-4.  **Deploy**: Oluşturulan dosyaları seçtiğiniz S3 bucket'ına dağıtın.
-
-| Pipeline Ayarları | Kaynak Aşaması |
+| Adım 1.1: Bucket İsmi | Adım 1.2: Statik Hosting |
 | :--- | :--- |
-| ![Pipeline Setup](./public/images/pdf-extracted/page_2.png) | ![Source Setup](./public/images/pdf-extracted/page_3.png) |
+| ![S3 Creation](./public/images/pdf-extracted/page_1.png) | ![Static Hosting](./public/images/pdf-extracted/page_10.png) |
 
 ---
 
-## 🌐 Adım 3: Cloudflare & Custom Domain Bağlantısı
+## 🔄 2. Adım: AWS CodePipeline CI/CD Kurulumu
 
-Sitenizi profesyonel bir domain üzerinden (`digitalmecra.devopsatolyesi.com`) yayına almak için Cloudflare ayarlarını yapıyoruz.
+Kodunuz her değiştiğinde (GitHub'a her push yaptığınızda) sitenizin otomatik olarak derlenip güncellenmesi için bir boru hattı kuruyoruz.
 
-1.  **CNAME Kaydı**: Cloudflare DNS panelinden bir `CNAME` kaydı açın.
-2.  **Hedef (Target)**: Hedef olarak S3 **Static Web Site Endpoint** adresini girin (Örn: `s3-digital-mecra.s3-website-us-east-1.amazonaws.com`).
-3.  **Proxy Status**: "Proxied" (Turuncu Bulut) durumuna getirin.
+### 2.1. Pipeline Ayarları
+1.  **İsim**: `digital-mecra`
+2.  **Mod**: `Queued` (Kuyruğa alınmış)
+3.  **Hizmet Rolü (Service Role)**: Yeni bir rol oluşturulmasına izin verin.
+
+![Pipeline Settings](./public/images/pdf-extracted/page_2.png)
+
+### 2.2. Kaynak (Source) Aşaması
+- **Kaynak Sağlayıcı**: `GitHub (via OAuth app)` seçin.
+- **Depo**: `hakanbayraktar/s3-landing-page` (veya kendi deponuz).
+- **Dal (Branch)**: `main`
+
+| Kaynak Bağlantısı | Depo Seçimi |
+| :--- | :--- |
+| ![GitHub Connect](./public/images/pdf-extracted/page_3.png) | ![Repo Selection](./public/images/pdf-extracted/page_4.png) |
+
+---
+
+## 🏗️ 3. Adım: AWS CodeBuild Kurulumu
+
+Projemizin derlenmesi (Build) için gerekli olan yapılandırma.
+
+1.  **Proje Adı**: `digital-mecra`
+2.  **Ortam (Environment)**: `Amazon Linux 2`, `Standard`, Image: `aws/codebuild/amazonlinux2-x86_64-standard:5.0`.
+3.  **Buildspec**: Dosyamızdaki `buildspec.yml` talimatlarını kullanın.
+
+| Build Ortamı | Buildspec & Loglar | Build Aşaması İncelemesi |
+| :--- | :--- | :--- |
+| ![CodeBuild Env](./public/images/pdf-extracted/page_5.png) | ![Buildspec](./public/images/pdf-extracted/page_6.png) | ![Build Stage](./public/images/pdf-extracted/page_7.png) |
+
+---
+
+## 📦 4. Adım: Dağıtım (Deploy) Aşaması
+
+Build edilen dosyaların S3 bucket'ına aktarılması.
+
+> [!CAUTION]
+> **Kritik Ayar**: Dağıtım sırasında **"Extract file before deploy"** (Dağıtımdan önce dosyayı çıkar) seçeneğini mutlaka işaretleyin. Aksi takdirde siteniz `.zip` olarak kalacak ve açılmayacaktır.
+
+- **Dağıtım Sağlayıcı**: `Amazon S3`
+- **Hedef Bucket**: `s3-digital-mecra`
+
+![Deploy Stage](./public/images/pdf-extracted/page_8.png)
+
+---
+
+## 🌐 5. Adım: Cloudflare CNAME & SSL
+
+Sitenizi kendi domain adınız üzerinden global olarak yayına açın.
+
+1.  **Cloudflare DNS**: Panelden bir `CNAME` kaydı ekleyin.
+2.  **Hedef (Target)**: S3 bucket endpoint'inizi girin (Örn: `s3-digital-mecra.s3-website-us-east-1.amazonaws.com`).
+3.  **Proxy Status**: Turuncu bulut (Proxied) durumunda olduğundan emin olun (SSL desteği için).
 
 ![Cloudflare CNAME](./public/images/pdf-extracted/page_12.png)
 
 ---
 
-## 🚨 Kritik Yapılandırmalar: CORS ve İzinler
+## 🚨 Kritik Güvenlik & CORS Yapılandırmaları
 
-Sitenizin sorunsuz çalışması (özellikle asset'lerin yüklenmesi) için aşağıdaki iki ayar hayati önem taşır.
+Sitenizin hatasız çalışması için şu iki ayarı yapmalısınız:
 
-### 1️⃣ CORS Ayarı (Cross-Origin Resource Sharing)
-Farklı kökenlerden gelen isteklerin (Cloudflare -> S3) reddedilmemesi için S3 Bucket -> Permissions -> CORS kısmına şu JSON'u ekleyin:
-
+### 1️⃣ CORS Ayarı (Access-Control-Allow-Origin)
+S3 Bucket -> Permissions -> CORS kısmına ekleyin:
 ```json
 [
     {
@@ -95,9 +101,8 @@ Farklı kökenlerden gelen isteklerin (Cloudflare -> S3) reddedilmemesi için S3
 ]
 ```
 
-### 2️⃣ Bucket Policy (İzinler)
-Dosyaların dünya genelinden okunabilmesi (403 Forbidden hatası almamak için):
-
+### 2️⃣ Bucket Policy (Genel Erişim)
+S3 Bucket -> Permissions -> Bucket Policy kısmına ekleyin:
 ```json
 {
     "Version": "2012-10-17",
@@ -113,18 +118,24 @@ Dosyaların dünya genelinden okunabilmesi (403 Forbidden hatası almamak için)
 }
 ```
 
+| Başarılı Dağıtım | Bucket Nesneleri | Bucket Politikası |
+| :--- | :--- | :--- |
+| ![Pipeline Success](./public/images/pdf-extracted/page_9.png) | ![Bucket Objects](./public/images/pdf-extracted/page_11.png) | ![Index Verify](./public/images/pdf-extracted/page_11.png) |
+
 ---
 
-## 🚀 Yerel Geliştirme
-
-Projeyi yerelde çalıştırmak için:
+## 💻 Yerel Geliştirme
 
 ```bash
 # Bağımlılıkları yükleyin
 npm install --legacy-peer-deps
 
-# Geliştirme sunucusunu başlatın
+# Geliştirme sunucusunu başlatın (Vite)
 npm run dev
+
+# Production build test edin
+npm run build
 ```
 
+---
 **Dijital Mecra** - Modern Web ve DevOps Çözümleri 🌟
