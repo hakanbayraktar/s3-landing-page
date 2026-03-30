@@ -1,88 +1,86 @@
-# 🚀 Dijital Mecra | Profesyonel AWS S3 & CodePipeline Dağıtım Rehberi
+# 🚀 Dijital Mecra | Professional AWS S3 & CodePipeline Deployment Guide
 
 [![AWS](https://img.shields.io/badge/AWS-S3%20%26%20CodePipeline-orange?style=for-the-badge&logo=amazon-aws)](https://aws.amazon.com/)
 [![Cloudflare](https://img.shields.io/badge/Cloudflare-DNS%20%26%20SSL-blue?style=for-the-badge&logo=cloudflare)](https://www.cloudflare.com/)
 
-Bu rehber, **Dijital Mecra** projenizi AWS bulut altyapısı üzerinde nasıl profesyonelce yayına alacağınızı adım adım göstermektedir.
+This guide walk you through the exact process of deploying your **Dijital Mecra** project professionally on AWS cloud infrastructure.
 
 ---
 
-## 💡 Neden AWS S3 ve Serverless Hosting?
-Geleneksel sunucu yönetimi yerine S3 tabanlı statik hosting tercih etmenin avantajları:
-- **Sıfır Sunucu Yönetimi**: OS güncellemeleri veya bakımla uğraşmazsınız.
-- **Maliyet Verimliliği**: Sadece kullandığınız trafik kadar ödeme yaparsınız.
-- **Yüksek Performans**: Amazon'un global altyapısı ile anında ölçeklenme.
-- **Güvenlik**: Sunucu erişimi (SSH) olmadığı için saldırı yüzeyi minimumdur.
+## 💡 Why Choose AWS S3 & Serverless Hosting?
+Key advantages of choosing S3-based static hosting over traditional server management:
+- **Zero Server Management**: No OS updates, no security patches. AWS handles the infrastructure.
+- **Cost Efficiency**: You only pay for what you use. Virtually free for small sites.
+- **Global Scalability**: S3 integrates with CDNs like Cloudflare for millisecond loading.
+- **Top-Tier Security**: No server access means a drastically reduced attack surface.
 
 ---
 
-## 🏗️ Proje Mimarisi (Architecture)
-Aşağıdaki dikey şema, kodun yerel geliştirme ortamınızdan globale ulaşma yolculuğunu göstermektedir:
+## 🏗️ Architecture: How It Works
+The following vertical diagram illustrates the journey from your keyboard to the user's browser:
 
 ```mermaid
 graph TD
-    subgraph GELISTIRME_FAZI ["1. Geliştirme & Kaynak Kontrolü"]
-        A["💻 Yerel Kod (VS Code)"] -->|Git Push| B["📦 GitHub Deposu (Main)"]
+    subgraph DEVELOPMENT_PHASE ["1. Development & Source Control"]
+        A["💻 Local Code (VS Code)"] -->|Git Push| B["📦 GitHub Repository (Main)"]
     end
-    subgraph CI_CD_FAZI ["2. Bulut Otomasyonu (AWS)"]
+    subgraph CI_CD_PHASE ["2. Cloud Automation (AWS)"]
         B -->|Webhook| C["🔄 AWS CodePipeline"]
         C --> D["🏗️ AWS CodeBuild (Build)"]
         D -->|Artifact| E["☁️ AWS S3 Bucket (Hosting)"]
     end
-    subgraph DAGITIM_FAZI ["3. Global Erişim & CDN"]
+    subgraph DEPLOYMENT_PHASE ["3. Global Access & CDN"]
         E -->|Origin| F["🛡️ Cloudflare DNS/SSL"]
-        F --> G["🌍 Global Kullanıcılar"]
+        F --> G["🌍 Global Users"]
     end
-    style GELISTIRME_FAZI fill:#f9f9f9,stroke:#333
-    style CI_CD_FAZI fill:#e1f5fe,stroke:#01579b
-    style DAGITIM_FAZI fill:#fff3e0,stroke:#e65100
+    style DEVELOPMENT_PHASE fill:#f9f9f9,stroke:#333
+    style CI_CD_PHASE fill:#e1f5fe,stroke:#01579b
+    style DEPLOYMENT_PHASE fill:#fff3e0,stroke:#e65100
 ```
-1. **Source**: Kod GitHub'a yüklendiğinde Pipeline tetiklenir.
-2. **Build**: CodeBuild `npm run build` ile statik dosyaları üretir.
-3. **Deploy**: Dosyalar otomatik olarak S3 Bucket'ına aktarılır.
-4. **CDN**: Cloudflare global dağıtım ve SSL sağlar.
+1. **Source**: Code pushed to GitHub triggers the pipeline.
+2. **Build**: CodeBuild runs `npm run build` to generate the `dist` folder.
+3. **Deploy**: Files are automatically synced to S3.
+4. **CDN**: Cloudflare caches S3 content globally and provide SSL support.
 
 ---
 
-## 🛠️ Kurulum Adımları (12 Adım)
+## 🛠️ Setup Steps (12 Steps)
 
-**Adım 1: S3 Bucket Oluşturma**
-AWS S3 konsoluna gidin, `s3-digital-mecra` adında bir bucket oluşturun. Bölge: `us-east-1` (Vegas).
+**Step 1: Create Your S3 Bucket**
+Head to the S3 console, create a bucket (e.g., `s3-digital-mecra`). Region: `us-east-1` (Vegas).
 ![S3 Bucket](./public/images/pdf-extracted/page_1.png)
-**Adım 2: CodePipeline Başlangıç**
-Pipeline ismi: `digital-mecra`. Mod: `Queued`. Otomatik rol oluşturulmasına izin verin.
+**Step 2: Initialize CodePipeline**
+Create a new pipeline. Name: `digital-mecra`. Mode: `Queued`. Allow a new service role.
 ![Pipeline Settings](./public/images/pdf-extracted/page_2.png)
-**Adım 3: Kaynak (GitHub) Bağlantısı**
-`GitHub (via OAuth app)` seçin ve hesabınızı yetkilendirerek bağlantıyı kurun.
+**Step 3: Connect to GitHub**
+Select `GitHub (via OAuth app)` as source. Authorize to allow listening for commits.
 ![Source Provider](./public/images/pdf-extracted/page_3.png)
-**Adım 4: Depo Seçimi**
-Depo: `hakanbayraktar/s3-landing-page`, Dal: `main`.
+**Step 4: Repository and Branch Selection**
+Select your repo (`hakanbayraktar/s3-landing-page`) and the `main` branch.
 ![Repo Selection](./public/images/pdf-extracted/page_4.png)
-**Adım 5: CodeBuild Ortamı**
-İşletim sistemi: `Amazon Linux 2`. Image: `aws/codebuild/amazonlinux2-x86_64-standard:5.0`.
+**Step 5: Configure CodeBuild Environment**
+OS: `Amazon Linux 2`. Image: `aws/codebuild/amazonlinux2-x86_64-standard:5.0`.
 ![Build Environment](./public/images/pdf-extracted/page_5.png)
-**Adım 6: Buildspec ve Loglar**
-Projeye dahil edilen `buildspec.yml` talimatlarını kullanın ve logları aktif edin.
+**Step 6: Buildspec and Logging**
+Use the `buildspec.yml` in your root. Enable `CloudWatch logs` for build debugging.
 ![Buildspec Settings](./public/images/pdf-extracted/page_6.png)
-**Adım 7: Build Stage Review**
-Oluşturduğunuz build projesini seçerek aşamayı onaylayın.
+**Step 7: Finalize Build Stage**
+Confirm your CodeBuild project and proceed to deployment.
 ![Build Review](./public/images/pdf-extracted/page_7.png)
-**Adım 8: S3 Dağıtım ve Kritik Ayar**
-**KRİTİK**: **Extract file before deploy** kutucuğunu işaretlemeyi unutmayın!
+**Step 8: Deploy to S3 (Crucial Step)**
+**CRITICAL**: Check the **"Extract file before deploy"** box to serve individual files.
 ![Deploy Settings](./public/images/pdf-extracted/page_8.png)
-**Adım 9: Pipeline İzleme**
-Tüm aşamaların yeşil (Succeeded) olduğunu doğrulayın.
+**Step 9: Monitor Your First Deployment**
+Wait for all three stages (Source, Build, Deploy) to show the green **"Succeeded"** status.
 ![Successful Pipeline](./public/images/pdf-extracted/page_9.png)
-**Adım 10: Statik Hosting Aktifleştirme**
-S3 Properties sekmesinden statik hosting'i açın ve `index.html` dosyasını belirtin.
+**Step 10: Enable Static Website Hosting**
+In S3 Properties, enable **Static website hosting** and specify `index.html` as the index.
 ![Static Hosting](./public/images/pdf-extracted/page_10.png)
-**Adım 11: İzinler ve Bucket Politikası**
-"Block all public access" ayarını kapatın ve genel erişim için Bucket Policy (JSON) ekleyin.
+**Step 11: Permissions and Public Access**
+Disable "Block all public access" and apply a **Bucket Policy** JSON for global read access.
 ![Bucket Policy](./public/images/pdf-extracted/page_11.png)
-**Adım 12: Cloudflare CNAME DNS**
-Cloudflare üzerinden CNAME kaydı oluşturun ve S3 endpoint'inizi hedef gösterin.
+**Step 12: DNS Configuration with Cloudflare**
+Add a `CNAME` in Cloudflare pointing to the S3 Website Endpoint. Set to **Proxied**.
 ![Cloudflare DNS](./public/images/pdf-extracted/page_12.png)
 
 ---
-
-**Dijital Mecra** - Modern Web ve DevOps Çözümleri 🌟
