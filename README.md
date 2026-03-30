@@ -1,103 +1,123 @@
-# Dijital Mecra | AWS S3 Hosting & Tam Otomatik CI/CD İş Akışı Rehberi 🚀
+# 🚀 Dijital Mecra | AWS S3 & Cloudflare Dağıtım Rehberi
 
-![Dijital Mecra Banner](./public/banner.png)
+[![AWS](https://img.shields.io/badge/AWS-S3%20%26%20CodePipeline-orange?style=for-the-badge&logo=amazon-aws)](https://aws.amazon.com/)
+[![Cloudflare](https://img.shields.io/badge/Cloudflare-DNS%20%26%20SSL-blue?style=for-the-badge&logo=cloudflare)](https://www.cloudflare.com/)
+[![DevOps](https://img.shields.io/badge/DevOps-CI%2FCD-green?style=for-the-badge)](https://en.wikipedia.org/wiki/DevOps)
 
-Bu proje, bir React uygulamasının **AWS S3** üzerinde statik olarak barındırılmasını ve **AWS CodePipeline** araçları ile uçtan uca otomatik bir **CI/CD (Sürekli Entegrasyon / Sürekli Dağıtım)** hattının nasıl kurulacağını profesyonel düzeyde anlatmaktadır.
-
-Bu rehber, [julien-muke/aws-codepipeline-react-s3](https://github.com/julien-muke/aws-codepipeline-react-s3) eğitim serisi temel alınarak **Dijital Mecra** altyapısına uygun şekilde hazırlanmıştır.
+Modern web uygulamalarınızı **AWS S3** üzerinde barındırıp, **AWS CodePipeline** ve **Cloudflare** ile profesyonel bir yayına alma sürecini bu rehberde bulabilirsiniz.
 
 ---
 
-## 🏗️ Proje Mimarisi
+## 🏗️ Mimari Yapı
 
-Daha önce çizmiş olduğumuz bu mimari şema, kodun GitHub'dan başlayıp global CDN ağına (Cloudflare) ulaşana kadar takip ettiği yolu göstermektedir:
+Aşağıdaki şemada, kodun yerel makinenizden başlayıp global olarak nasıl yayına girdiği gösterilmektedir:
 
 ```mermaid
 graph TD
-    subgraph GitHub ["GitHub Repository"]
-        SourceCode[Kod Güncelleme / Git Push]
+    subgraph Yerel_Gelisim ["1. Yerel Geliştirme"]
+        Dev[Kod Yazımı & Test] --> Push[Git Push]
     end
 
-    subgraph AWS_Cloud ["AWS Bulut Platformu"]
-        CP[AWS CodePipeline - Orkestrasyon]
-        CB[AWS CodeBuild - Derleme ve Paketleme]
-        S3_Host[AWS S3 Bucket - Website Hosting]
-        S3_Art[AWS S3 Bucket - Pipeline Artifacts]
-        
-        SourceCode -->|WebHook Tetikleyici| CP
-        CP -->|Adım 1: Build| CB
-        CB -->|Adım 2: Artifacts Kaydı| S3_Art
-        CP -->|Adım 3: S3'e Dağıtım| S3_Host
+    subgraph GitHub ["2. Kaynak Kontrolü"]
+        Push --> Repo[hakanbayraktar/s3-landing-page]
     end
 
-    subgraph Erişim_Güvenlik ["Domain & SSL Yönetimi"]
-        CF[Cloudflare CDN / DNS]
-        S3_Host -.->|Statik Web İçeriği| CF
+    subgraph AWS_Bulut ["3. CI/CD Hattı (AWS)"]
+        Repo --> CP[AWS CodePipeline]
+        CP --> CB[AWS CodeBuild]
+        CB -->|Artifacts| S3_Host[AWS S3 - Hosting Bucket]
     end
 
-    User((Kullanıcılar)) -->|HTTPS Sorgusu| CF
-    CF -->|Önbellek & Proxy| S3_Host
+    subgraph Erisim ["4. Global Erişim (Cloudflare)"]
+        S3_Host --> CF[Cloudflare CDN / DNS]
+        CF --> User((Kullanıcılar))
+    end
 ```
 
 ---
 
-## 🛠️ Detaylı AWS Kurulum ve Yapılandırma Adımları
+## 🛠️ Adım 1: S3 Bucket & Statik Hosting
 
-Aşağıdaki adımlar, projenizi AWS bulutunda profesyonelce barındırmak için izlemeniz gereken tam prosedürdür.
+İlk aşamada dosyalarımızın barınacağı ana alanı oluşturuyoruz.
 
-### 📋 Ön Hazırlık
-1. **AWS Hesabı:** Aktif bir AWS hesabınızın olduğundan emin olun.
-2. **GitHub Deposu:** Bu repoyu kendi GitHub hesabınıza kopyalayın (Fork) veya yeni bir repo oluşturun.
-3. **Buildspec Dosyası:** Proje kökündeki `buildspec.yml` dosyasının varlığından emin olun.
+> [!IMPORTANT]
+> **Bucket İsmi Hakkında**: Yaygın bir yanlış inanışın aksine, Cloudflare ile CNAME kullanırken S3 bucket ismi mutlaka domain adınızla aynı olmak zorunda değildir. Ancak düzenli olması adına benzer bir isim seçmeniz önerilir.
 
----
+1.  **Bucket Oluşturma**: `s3-digital-mecra` isminde bir bucket oluşturun.
+2.  **Statik Web Sitesi**: "Static website hosting" özelliğini aktif edin.
 
-### Adım 1: Amazon S3 Bucket Kurulumu (Statik Hosting)
-1. **Amazon S3** konsoluna gidin ve **"Create bucket"** butonuna tıklayın.
-2. **Bucket Name:** `digitalmecra-s3-bucket` (Özgün bir isim olmalı).
-3. **Permissions:** "Block all public access" seçimini kaldırın.
-   ![Block Public Access](./public/images/detailed-setup/s3-public.png)
-4. **Properties Sekmesi:** En altta **Static website hosting** seçeneğini etkinleştirin.
-   ![Static Hosting Setup](./public/images/detailed-setup/s3-static.png)
-5. **Bucket Policy:** Permissions sekmesine giderek genel okuma izni veren politikayı ekleyin.
-   ![Bucket Policy Setup](./public/images/detailed-setup/s3-policy.png)
+![S3 Bucket Creation](./public/images/pdf-extracted/page_1.png)
 
 ---
 
-### Adım 2: AWS CodePipeline CI/CD Hattının Oluşturulması
-1. **Step 1: Choose pipeline settings**
-   - **Pipeline name:** `digitalmecra-pipeline`
-   - **Service role:** "New service role" seçeneğini işaretleyin.
-   ![Pipeline Settings](./public/images/detailed-setup/pipeline-settings.png)
+## 🔄 Adım 2: AWS CodePipeline CI/CD Kurulumu
 
-2. **Step 2: Add source stage**
-   - **Source provider:** GitHub (Version 2).
-   ![Source Stage](./public/images/detailed-setup/pipeline-source.png)
+Kodunuz her değiştiğinde sitenizin otomatik güncellenmesi için bir boru hattı (pipeline) kuruyoruz.
 
-3. **Step 3: Add build stage**
-   - **Build provider:** AWS CodeBuild.
-   ![Build Stage](./public/images/detailed-setup/pipeline-build.png)
+1.  **Pipeline Ayarları**: Queued (Kuyruğa alınmış) modda ve yeni bir `Service Role` ile başlatın.
+2.  **Kaynak**: GitHub (OAuth) kullanarak deponuzu bağlayın.
+3.  **Build**: AWS CodeBuild kullanarak `npm run build` komutunu çalıştıracak yapılandırmayı yapın.
+4.  **Deploy**: Oluşturulan dosyaları seçtiğiniz S3 bucket'ına dağıtın.
 
-4. **Step 4: Add deploy stage**
-   - **Deploy provider:** Amazon S3.
-   - **Bucket:** `digitalmecra-s3-bucket`.
-   - **ÖNEMLİ:** "Extract file before deploy" kutucuğunu işaretleyin.
-   ![Deploy Stage](./public/images/detailed-setup/pipeline-deploy.png)
+| Pipeline Ayarları | Kaynak Aşaması |
+| :--- | :--- |
+| ![Pipeline Setup](./public/images/pdf-extracted/page_2.png) | ![Source Setup](./public/images/pdf-extracted/page_3.png) |
 
 ---
 
-### Adım 5: Dağıtımı Doğrulama
-Pipeline başarılı bir şekilde tamamlandığında, S3 statik web sitesi adresinizden projenize erişebilirsiniz.
-![Success Page](./public/images/detailed-setup/success.png)
+## 🌐 Adım 3: Cloudflare & Custom Domain Bağlantısı
+
+Sitenizi profesyonel bir domain üzerinden (`digitalmecra.devopsatolyesi.com`) yayına almak için Cloudflare ayarlarını yapıyoruz.
+
+1.  **CNAME Kaydı**: Cloudflare DNS panelinden bir `CNAME` kaydı açın.
+2.  **Hedef (Target)**: Hedef olarak S3 **Static Web Site Endpoint** adresini girin (Örn: `s3-digital-mecra.s3-website-us-east-1.amazonaws.com`).
+3.  **Proxy Status**: "Proxied" (Turuncu Bulut) durumuna getirin.
+
+![Cloudflare CNAME](./public/images/pdf-extracted/page_12.png)
 
 ---
 
-### Adım 6: Cloudflare ile Custom Domain & SSL Ayarları
-Sitenizin kurumsal bir domain (`digitalmecra.devopsatolyesi.com`) altında HTTPS ile yayınlanması için Cloudflare DNS ayarlarını yapın.
+## 🚨 Kritik Yapılandırmalar: CORS ve İzinler
+
+Sitenizin sorunsuz çalışması (özellikle asset'lerin yüklenmesi) için aşağıdaki iki ayar hayati önem taşır.
+
+### 1️⃣ CORS Ayarı (Cross-Origin Resource Sharing)
+Farklı kökenlerden gelen isteklerin (Cloudflare -> S3) reddedilmemesi için S3 Bucket -> Permissions -> CORS kısmına şu JSON'u ekleyin:
+
+```json
+[
+    {
+        "AllowedHeaders": ["*"],
+        "AllowedMethods": ["GET", "HEAD"],
+        "AllowedOrigins": ["*"],
+        "ExposedHeaders": []
+    }
+]
+```
+
+### 2️⃣ Bucket Policy (İzinler)
+Dosyaların dünya genelinden okunabilmesi (403 Forbidden hatası almamak için):
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "PublicReadGetObject",
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::s3-digital-mecra/*"
+        }
+    ]
+}
+```
 
 ---
 
-## 🚀 Yerel Geliştirme Notları
+## 🚀 Yerel Geliştirme
+
+Projeyi yerelde çalıştırmak için:
 
 ```bash
 # Bağımlılıkları yükleyin
@@ -107,4 +127,4 @@ npm install --legacy-peer-deps
 npm run dev
 ```
 
-**Dijital Mecra** - AWS & DevOps Eğitim Platformu
+**Dijital Mecra** - Modern Web ve DevOps Çözümleri 🌟
